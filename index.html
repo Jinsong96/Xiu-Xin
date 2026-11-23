@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>一念</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M74 26C62 14 40 13 26 26C12 39 12 62 25 75C38 88 61 88 75 74C86 63 87 43 77 32' fill='none' stroke='%231C1A17' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="desktop-stage">
+    <div class="phone-scale-container" id="phoneScaleContainer">
+      <div class="iphone-frame" id="iphoneFrame">
+        <div class="iphone-screen" id="iphoneScreen">
+          <!-- 状态栏 + 灵动岛 -->
+          <div class="ios-statusbar">
+            <span class="status-time" id="statusTime">09:41</span>
+            <div class="dynamic-island" aria-hidden="true">
+              <span class="island-cam"></span>
+            </div>
+            <div class="status-icons" aria-hidden="true">
+              <svg width="15" height="10" viewBox="0 0 16 11" fill="currentColor">
+                <rect x="0" y="7" width="2.4" height="4" rx="0.8"/>
+                <rect x="4" y="5" width="2.4" height="6" rx="0.8"/>
+                <rect x="8" y="2.5" width="2.4" height="8.5" rx="0.8"/>
+                <rect x="12" y="0" width="2.4" height="11" rx="0.8"/>
+              </svg>
+              <svg width="14" height="10" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <path d="M1.5 4.2C5.2 0.8 10.8 0.8 14.5 4.2"/>
+                <path d="M4.2 7C6.4 5 9.6 5 11.8 7"/>
+                <circle cx="8" cy="10" r="1.1" fill="currentColor" stroke="none"/>
+              </svg>
+              <svg width="21" height="10" viewBox="0 0 24 12" fill="none">
+                <rect x="0.8" y="1.2" width="19.5" height="9.6" rx="2.8" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.2"/>
+                <rect x="2.4" y="2.8" width="15.5" height="6.4" rx="1.6" fill="currentColor"/>
+                <path d="M21.8 4.2V7.8C22.6 7.5 23 6.8 23 6C23 5.2 22.6 4.5 21.8 4.2Z" fill="currentColor" fill-opacity="0.4"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- 自动禅滑进度条 -->
+          <div class="autoscroll-bar" id="autoscrollBar">
+            <div class="autoscroll-fill" id="autoscrollFill"></div>
+          </div>
+          <button class="autoscroll-pill hidden" id="autoscrollPill" type="button">
+            <span class="pulse-dot"></span> 自动禅滑
+          </button>
+
+          <!-- ==================== TAB 1: 经流 (Main Feed) ==================== -->
+          <main class="view view-feed active" id="viewFeed" aria-label="经流">
+            <header class="feed-topbar">
+              <div class="topbar-group">
+                <button class="icon-ghost" id="btnRandomVerse" type="button" title="随缘跳句" aria-label="随缘跳句">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="4"/>
+                    <circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/>
+                    <circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/>
+                    <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+                    <circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/>
+                    <circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/>
+                  </svg>
+                </button>
+                <button class="icon-ghost" id="btnFilterLiked" type="button" title="只看珍藏" aria-label="只看珍藏">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </button>
+                <button class="icon-ghost" id="btnThemeToggle" type="button" title="宣纸 / 静夜" aria-label="切换宣纸或静夜模式">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="12" y1="2.5" x2="12" y2="4.5"/>
+                    <line x1="12" y1="19.5" x2="12" y2="21.5"/>
+                    <line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/>
+                    <line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/>
+                    <line x1="2.5" y1="12" x2="4.5" y2="12"/>
+                    <line x1="19.5" y1="12" x2="21.5" y2="12"/>
+                    <line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/>
+                    <line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="topbar-group">
+                <button class="icon-ghost" id="btnTopBookmark" type="button" title="书签" aria-label="书签">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
+                <button class="sutra-pill" id="btnSutraPicker" type="button">
+                  <span id="sutraPillLabel">心经 1/9</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <!-- 左侧节号标尺 -->
+            <nav class="verse-ruler" id="verseRuler" aria-label="经文节号"></nav>
+
+            <!-- 主竖向滑动流 -->
+            <div class="feed-scroll" id="feedScroll"></div>
+
+            <!-- 右下角极简互动栈 -->
+            <aside class="feed-actions" id="feedActions" aria-label="互动">
+              <button class="action-btn" id="actLike" type="button" aria-label="珍藏">
+                <span class="action-icon-wrap">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </span>
+                <span class="action-count" id="actLikeCount">1.2k</span>
+              </button>
+              <button class="action-btn" id="actComment" type="button" aria-label="感悟">
+                <span class="action-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                  </svg>
+                </span>
+                <span class="action-count" id="actCommentCount">2</span>
+              </button>
+              <button class="action-btn" id="actShare" type="button" aria-label="日签">
+                <span class="action-icon-wrap">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </span>
+              </button>
+            </aside>
+          </main>
+
+          <!-- ==================== TAB 2: 发现 (Discover) ==================== -->
+          <section class="view view-discover" id="viewDiscover" aria-label="发现">
+            <div class="subpage-scroll">
+              <div class="page-header">
+                <h1>发现</h1>
+              </div>
+
+              <div class="search-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="search" id="discoverSearch" placeholder="搜索经句或心境" autocomplete="off" />
+                <button class="search-clear hidden" id="searchClear" type="button">清除</button>
+              </div>
+
+              <div id="searchResultsWrap" class="hidden">
+                <div class="section-head">
+                  <h2>检索</h2>
+                  <span class="section-meta" id="searchResultCount"></span>
+                </div>
+                <div class="search-results-list" id="searchResultsList"></div>
+              </div>
+
+              <div id="discoverDefaultBody">
+                <div class="section-head">
+                  <h2>此刻心境</h2>
+                </div>
+                <div class="h-scroll mood-rail" id="moodRail"></div>
+
+                <div class="section-head">
+                  <h2>随缘一刷</h2>
+                  <button class="link-btn" id="btnStartDiscoverCards" type="button">
+                    <span>随缘开刷</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                </div>
+                <div class="h-scroll story-rail" id="storyRail"></div>
+
+                <div class="section-head">
+                  <h2>全经脉络</h2>
+                </div>
+                <div class="entry-cards">
+                  <button class="entry-row-card" id="btnOpenContextXinjing" type="button">
+                    <div>
+                      <strong>般若波罗蜜多心经</strong>
+                      <span>玄奘译 · 二百六十字全篇</span>
+                    </div>
+                    <svg class="chev-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                  <button class="entry-row-card" id="btnOpenContextJingang" type="button">
+                    <div>
+                      <strong>金刚般若波罗蜜经</strong>
+                      <span>鸠摩罗什译 · 核心九分</span>
+                    </div>
+                    <svg class="chev-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== TAB 3: 修行 (Plans) ==================== -->
+          <section class="view view-plans" id="viewPlans" aria-label="修行">
+            <div class="subpage-scroll">
+              <div class="page-header">
+                <h1>修行</h1>
+              </div>
+
+              <div class="quiet-counter-card">
+                <div class="counter-col">
+                  <span class="counter-num" id="todayReadCount">1</span>
+                  <span class="counter-label">今日</span>
+                </div>
+                <div class="counter-divider"></div>
+                <div class="counter-col">
+                  <span class="counter-num" id="totalReadCount">1</span>
+                  <span class="counter-label">累计</span>
+                </div>
+                <div class="counter-divider"></div>
+                <div class="counter-col">
+                  <span class="counter-num" id="savedSummaryCount">0</span>
+                  <span class="counter-label">珍藏</span>
+                </div>
+              </div>
+
+              <div class="section-label">当前共修</div>
+              <div class="active-plan-card" id="activePlanCard"></div>
+
+              <div class="section-head" style="margin-top: 24px;">
+                <h2>初入推荐</h2>
+              </div>
+              <div class="plans-list" id="plansList"></div>
+            </div>
+          </section>
+
+          <!-- ==================== TAB 4: 我的 (Mine) ==================== -->
+          <section class="view view-mine" id="viewMine" aria-label="我的">
+            <div class="subpage-scroll">
+              <div class="page-header">
+                <h1>我的</h1>
+              </div>
+
+              <div class="pro-banner" id="mineProBanner">
+                <div class="pro-banner-text">
+                  <span class="pro-tag" id="mineProBadge">一念 Pro</span>
+                  <strong id="mineProTitle">梵文词源 · 异译对照</strong>
+                </div>
+                <button class="pro-cta-btn" id="btnOpenPaywallFromMine" type="button">了解</button>
+              </div>
+
+              <div class="mine-seg">
+                <button class="seg-btn active" data-mine-tab="liked" type="button">珍藏 (<span id="mineLikedNum">0</span>)</button>
+                <button class="seg-btn" data-mine-tab="bookmarked" type="button">笔记 (<span id="mineBookmarkedNum">0</span>)</button>
+              </div>
+
+              <div class="mine-list" id="mineList"></div>
+
+              <div class="mine-footer-actions">
+                <button class="ghost-row-btn" id="btnMineReplayOnboarding" type="button">重温初见</button>
+                <button class="ghost-row-btn" id="btnMineToggleTheme" type="button">静夜模式</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== 悬浮液态玻璃底栏 ==================== -->
+          <nav class="tab-bar" id="tabBar" aria-label="主导航">
+            <button class="tab-item active" data-tab="feed" type="button">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9c0-2.9 1.37-5.48 3.5-7.13"/>
+              </svg>
+              <span>经流</span>
+            </button>
+            <button class="tab-item" data-tab="discover" type="button">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/>
+              </svg>
+              <span>发现</span>
+            </button>
+            <button class="tab-item" data-tab="plans" type="button">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              <span>修行</span>
+            </button>
+            <button class="tab-item" data-tab="mine" type="button">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6"/>
+              </svg>
+              <span>我的</span>
+            </button>
+          </nav>
+
+          <!-- ==================== Discover 沉浸知识单卡弹层 ==================== -->
+          <div class="overlay-page hidden" id="discoverCardPage" aria-hidden="true">
+            <div class="discover-card-topbar">
+              <button class="circle-back-btn" id="btnCloseDiscoverCard" type="button" aria-label="返回">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </button>
+              <span class="discover-card-counter" id="discoverCardCounter">1 / 5</span>
+              <div class="discover-card-nav-btns">
+                <button class="circle-back-btn" id="btnPrevDiscoverCard" type="button" aria-label="上一张">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="circle-back-btn" id="btnNextDiscoverCard" type="button" aria-label="下一张">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="discover-detail-card" id="discoverDetailCard"></div>
+          </div>
+
+          <!-- ==================== Bottom Sheet: 轻触解经 ==================== -->
+          <div class="sheet-backdrop hidden" id="studySheetBackdrop">
+            <div class="bottom-sheet" id="studySheet" role="dialog" aria-modal="true">
+              <div class="sheet-handle"></div>
+              <div id="studySheetContent"></div>
+            </div>
+          </div>
+
+          <!-- ==================== Bottom Sheet: 经卷 ==================== -->
+          <div class="sheet-backdrop hidden" id="sutraSheetBackdrop">
+            <div class="bottom-sheet" id="sutraSheet" role="dialog" aria-modal="true">
+              <div class="sheet-handle"></div>
+              <div id="sutraSheetContent"></div>
+            </div>
+          </div>
+
+          <!-- ==================== Bottom Sheet: 感悟 ==================== -->
+          <div class="sheet-backdrop hidden" id="commentSheetBackdrop">
+            <div class="bottom-sheet tall-sheet" id="commentSheet" role="dialog" aria-modal="true">
+              <div class="sheet-handle"></div>
+              <div id="commentSheetContent"></div>
+            </div>
+          </div>
+
+          <!-- ==================== 全经上下文 Modal ==================== -->
+          <div class="modal-backdrop hidden" id="contextModalBackdrop">
+            <div class="full-modal" id="contextModal">
+              <div class="modal-topbar">
+                <h3 id="contextModalTitle">全经上下文</h3>
+                <button class="pill-close-btn" id="btnCloseContextModal" type="button">完成</button>
+              </div>
+              <div class="modal-scroll" id="contextModalBody"></div>
+            </div>
+          </div>
+
+          <!-- ==================== 锁屏组件预览 Modal ==================== -->
+          <div class="modal-backdrop hidden" id="widgetModalBackdrop">
+            <div class="full-modal lockscreen-modal" id="widgetModal">
+              <div class="lockscreen-topbar">
+                <span>锁屏组件</span>
+                <button class="pill-close-btn dark" id="btnCloseWidgetModal" type="button">关闭</button>
+              </div>
+              <div class="lockscreen-preview" id="widgetPreviewBody"></div>
+            </div>
+          </div>
+
+          <!-- ==================== 禅意日签海报 Modal ==================== -->
+          <div class="modal-backdrop hidden" id="snapshotModalBackdrop">
+            <div class="full-modal" id="snapshotModal">
+              <div class="modal-topbar">
+                <h3>禅意日签</h3>
+                <button class="pill-close-btn" id="btnCloseSnapshotModal" type="button">关闭</button>
+              </div>
+              <div class="snapshot-body" id="snapshotModalBody"></div>
+            </div>
+          </div>
+
+          <!-- ==================== Pro Paywall 弹窗 ==================== -->
+          <div class="modal-backdrop hidden" id="paywallModalBackdrop">
+            <div class="full-modal paywall-modal" id="paywallModal">
+              <button class="paywall-close-x" id="btnClosePaywall" type="button" aria-label="关闭">✕</button>
+              <div class="paywall-inner" id="paywallInner"></div>
+            </div>
+          </div>
+
+          <!-- ==================== Onboarding 引导层 ==================== -->
+          <div class="onboarding-overlay" id="onboardingOverlay">
+            <div class="onboarding-step active" id="onboardStep1">
+              <div class="onboard-enso">
+                <svg width="56" height="56" viewBox="0 0 100 100" fill="none">
+                  <path d="M74 26C62 14 40 13 26 26C12 39 12 62 25 75C38 88 61 88 75 74C86 63 87 43 77 32" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h1 class="onboard-headline">每天 <strong>2.5 小时</strong>，<br/>指尖在喧嚣里滑过。</h1>
+              <p class="onboard-sub">这一次，留给一念清净。</p>
+              <div class="onboard-bottom">
+                <button class="black-cta-btn" id="btnOnboardNext" type="button">开始</button>
+                <button class="text-skip-btn" id="btnOnboardSkip" type="button">跳过</button>
+              </div>
+            </div>
+
+            <div class="onboarding-step" id="onboardStep2">
+              <h2 class="onboard-q">此刻，心向何处？</h2>
+              <div class="intention-list">
+                <button class="intention-card" data-intent="xj-1" type="button">
+                  <strong>安顿焦虑</strong>
+                  <span>照见五蕴皆空</span>
+                </button>
+                <button class="intention-card" data-intent="jg-1" type="button">
+                  <strong>放下执念</strong>
+                  <span>凡所有相，皆是虚妄</span>
+                </button>
+                <button class="intention-card" data-intent="xj-7" type="button">
+                  <strong>静读经典</strong>
+                  <span>无挂碍故，无有恐怖</span>
+                </button>
+              </div>
+              <button class="text-skip-btn" id="btnOnboardBack" type="button">返回</button>
+            </div>
+          </div>
+
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <div class="home-indicator" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 桌面展陈静默名牌 -->
+    <aside class="companion-panel" aria-label="展陈导览">
+      <div class="placard-head">
+        <span class="placard-title">一念</span>
+        <span class="placard-sub">心经 · 金刚经</span>
+      </div>
+      <div class="placard-rule"></div>
+      <div class="placard-note">
+        <span>滑动或 ↑ ↓ 换句</span>
+        <span>轻触经文解经</span>
+      </div>
+      <div class="placard-actions">
+        <button class="ctrl-btn" id="deskReplayOnboard" type="button">初见</button>
+        <button class="ctrl-btn" id="deskToggleTheme" type="button">昼夜</button>
+        <button class="ctrl-btn" id="deskSwitchSutra" type="button">换经</button>
+        <button class="ctrl-btn accent" id="deskOpenPaywall" type="button">Pro</button>
+      </div>
+    </aside>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
