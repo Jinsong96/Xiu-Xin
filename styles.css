@@ -234,6 +234,18 @@ html, body {
   display: flex;
 }
 
+.view:not(.view-feed)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: linear-gradient(to bottom, var(--paper) 76%, transparent 100%);
+  z-index: 30;
+  pointer-events: none;
+}
+
 /* ==================== TAB 1: 经流主视图 ==================== */
 .feed-topbar {
   position: absolute;
@@ -385,6 +397,17 @@ html, body {
   color: var(--paper);
   font-weight: 600;
   padding: 0 6px;
+}
+
+.verse-ruler.dense .ruler-tick {
+  min-width: 14px;
+  height: 11px;
+  font-size: 8.5px;
+}
+
+.verse-ruler.dense .ruler-dot {
+  width: 3px;
+  height: 3px;
 }
 
 /* 主滚动流 */
@@ -1659,8 +1682,13 @@ html, body {
 /* 选经抽屉 */
 .sutra-switch-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sutra-mode-full {
+  width: 100%;
   margin-bottom: 14px;
 }
 
@@ -1669,10 +1697,10 @@ html, body {
   background: var(--paper-soft);
   color: var(--ink);
   border-radius: 12px;
-  padding: 9px 6px;
+  padding: 8px 4px;
   text-align: center;
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -2176,7 +2204,7 @@ html, body {
   background: var(--paper-elevated);
   border: 0.5px solid var(--border);
   border-radius: 16px;
-  padding: 16px 18px;
+  padding: 13px 16px;
   text-align: left;
   color: var(--ink);
   cursor: pointer;

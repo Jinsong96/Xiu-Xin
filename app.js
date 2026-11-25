@@ -85,17 +85,17 @@
 
   function getFeedList() {
     let list;
-    if (state.sutraMode === "xinjing") {
-      list = DATA.VERSES.filter((v) => v.sutra === "xinjing");
-    } else if (state.sutraMode === "jingang") {
-      list = DATA.VERSES.filter((v) => v.sutra === "jingang");
+    const singleSutras = ["xinjing", "jingang", "dizang", "yaoshi"];
+    if (singleSutras.includes(state.sutraMode)) {
+      list = DATA.VERSES.filter((v) => v.sutra === state.sutraMode);
     } else {
-      const xj = DATA.VERSES.filter((v) => v.sutra === "xinjing");
-      const jg = DATA.VERSES.filter((v) => v.sutra === "jingang");
+      const buckets = singleSutras.map((s) => DATA.VERSES.filter((v) => v.sutra === s));
+      const maxLen = Math.max(...buckets.map((b) => b.length));
       list = [];
-      for (let i = 0; i < Math.max(xj.length, jg.length); i++) {
-        if (xj[i]) list.push(xj[i]);
-        if (jg[i]) list.push(jg[i]);
+      for (let i = 0; i < maxLen; i++) {
+        buckets.forEach((b) => {
+          if (b[i]) list.push(b[i]);
+        });
       }
     }
 
@@ -200,6 +200,7 @@
       .join("");
 
     // 左侧节号标尺（仅首末显示数字，中间平时静默微点，当前节展开数字胶囊）
+    rulerEl.classList.toggle("dense", list.length > 12);
     rulerEl.innerHTML = list
       .map((v, idx) => {
         const label = String(idx + 1).padStart(2, "0");
@@ -601,9 +602,10 @@
     const list = getFeedList();
     const wrap = $("#sutraSheetContent");
     const modes = [
-      { id: "xinjing", label: "心经 · 九屏" },
-      { id: "jingang", label: "金刚经 · 九屏" },
-      { id: "mixed", label: "合流" }
+      { id: "xinjing", label: "心经" },
+      { id: "jingang", label: "金刚经" },
+      { id: "dizang", label: "地藏经" },
+      { id: "yaoshi", label: "药师经" }
     ];
 
     wrap.innerHTML = `
@@ -620,6 +622,7 @@
           )
           .join("")}
       </div>
+      <button class="sutra-mode-btn sutra-mode-full ${state.sutraMode === "mixed" ? "active" : ""}" data-sutra-mode="mixed" type="button">四经合流 · ${DATA.VERSES.length} 屏</button>
       <div class="jump-list">
         ${list
           .map(
@@ -722,8 +725,7 @@
 
   // ==================== 全经上下文 Modal ====================
   function openContextModal(sutraKey, highlightId) {
-    const key = sutraKey === "jingang" ? "jingang" : "xinjing";
-    const full = DATA.FULL_SUTRAS[key];
+    const full = DATA.FULL_SUTRAS[sutraKey] || DATA.FULL_SUTRAS.xinjing;
     $("#contextModalTitle").textContent = full.title;
     const body = $("#contextModalBody");
 
@@ -924,9 +926,9 @@
       <p class="pw-sub">${reasonText}</p>
 
       <div class="pw-compare">
-        <div class="pw-row"><span>心经 · 金刚经竖滑阅读</span><strong>免费</strong></div>
+        <div class="pw-row"><span>四经竖滑阅读</span><strong>免费</strong></div>
         <div class="pw-row"><span>梵文原典词根拆解</span><strong style="color:var(--bronze);">Pro</strong></div>
-        <div class="pw-row"><span>玄奘 · 鸠摩罗什 · 义净异译对照</span><strong style="color:var(--bronze);">Pro</strong></div>
+        <div class="pw-row"><span>玄奘 · 鸠摩罗什 · 实叉难陀 · 义净异译对照</span><strong style="color:var(--bronze);">Pro</strong></div>
         <div class="pw-row"><span>全套禅意日签皮肤</span><strong style="color:var(--bronze);">Pro</strong></div>
       </div>
 
@@ -1006,7 +1008,8 @@
       knot: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M12 3a4 4 0 0 0-4 4c0 3 4 5 4 5s4-2 4-5a4 4 0 0 0-4-4z"/><path d="M12 21a4 4 0 0 1-4-4c0-3 4-5 4-5s4 2 4 5a4 4 0 0 1-4 4z"/><path d="M3 12a4 4 0 0 1 4-4c3 0 5 4 5 4s-2 4-5 4a4 4 0 0 1-4-4z"/><path d="M21 12a4 4 0 0 0-4-4c-3 0-5 4-5 4s2 4 5 4a4 4 0 0 0 4-4z"/></svg>`,
       anchor: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="6" r="2.5"/><line x1="12" y1="8.5" x2="12" y2="20"/><path d="M5 13a7 7 0 0 0 14 0"/><line x1="9" y1="12" x2="15" y2="12"/></svg>`,
       moon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-      waves: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M2 8c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 3-1.5 4 0"/><path d="M2 15c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 3-1.5 4 0"/></svg>`
+      waves: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M2 8c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 3-1.5 4 0"/><path d="M2 15c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 3-1.5 4 0"/></svg>`,
+      lotus: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c2.2 3 2.5 6.8 0 10.5C9.5 10.8 9.8 7 12 4z"/><path d="M12 14.5c2.8-2.4 5.8-3 8-2-1 3.6-3.8 5.5-8 5.5s-7-1.9-8-5.5c2.2-1 5.2-.4 8 2z"/><path d="M7 19.5h10"/></svg>`
     };
     return svgs[type] || svgs.knot;
   }
@@ -1195,7 +1198,7 @@
 
   // ==================== TAB 3: 修行 Plans ====================
   function renderPlans() {
-    $("#todayReadCount").textContent = String(Math.min(state.readIds.length, 18));
+    $("#todayReadCount").textContent = String(Math.min(state.readIds.length, DATA.VERSES.length));
     $("#totalReadCount").textContent = String(state.readIds.length);
     $("#savedSummaryCount").textContent = String(state.likedIds.length);
 
@@ -1386,10 +1389,12 @@
     });
 
     $("#btnStartDiscoverCards").addEventListener("click", () => {
-      openDiscoverCards(["xj-1", "jg-1", "jg-2", "xj-7", "jg-5"], 0);
+      openDiscoverCards(["xj-1", "jg-2", "dz-1", "ys-2", "dz-5", "ys-7"], 0);
     });
     $("#btnOpenContextXinjing").addEventListener("click", () => openContextModal("xinjing", state.currentVerseId));
     $("#btnOpenContextJingang").addEventListener("click", () => openContextModal("jingang", state.currentVerseId));
+    $("#btnOpenContextDizang").addEventListener("click", () => openContextModal("dizang", state.currentVerseId));
+    $("#btnOpenContextYaoshi").addEventListener("click", () => openContextModal("yaoshi", state.currentVerseId));
 
     $("#btnCloseDiscoverCard").addEventListener("click", closeDiscoverCard);
     $("#btnPrevDiscoverCard").addEventListener("click", () => {
@@ -1460,14 +1465,17 @@
     });
     $("#deskToggleTheme").addEventListener("click", toggleTheme);
     $("#deskSwitchSutra").addEventListener("click", () => {
-      state.sutraMode = state.sutraMode === "xinjing" ? "jingang" : "xinjing";
+      const order = ["xinjing", "jingang", "dizang", "yaoshi"];
+      const labels = { xinjing: "心经", jingang: "金刚经", dizang: "地藏经", yaoshi: "药师经" };
+      const idx = order.indexOf(state.sutraMode);
+      state.sutraMode = order[(idx + 1) % order.length];
       state.filterLikedOnly = false;
       const list = getFeedList();
       state.currentVerseId = list[0].id;
       saveState();
       switchTab("feed");
       renderFeed();
-      showToast(state.sutraMode === "xinjing" ? "心经" : "金刚经");
+      showToast(labels[state.sutraMode]);
     });
     $("#deskOpenPaywall").addEventListener("click", () => openPaywallModal());
   }
