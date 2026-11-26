@@ -841,6 +841,7 @@
     const metas = getAllSutrasMeta();
     $("#fullSutraSheetContent").innerHTML = `
       <div class="sheet-top-row">
+        <button class="sheet-text-btn" id="btnOpenUploadFromFullSutra" type="button">+ 上传</button>
         <span class="sheet-nav-title">全经脉络</span>
         <button class="sheet-text-btn accent" id="btnCloseFullSutraSheet" type="button">关闭</button>
       </div>
@@ -862,6 +863,10 @@
     `;
     $("#fullSutraSheetBackdrop").classList.remove("hidden");
     $("#btnCloseFullSutraSheet").addEventListener("click", () => $("#fullSutraSheetBackdrop").classList.add("hidden"));
+    $("#btnOpenUploadFromFullSutra").addEventListener("click", () => {
+      $("#fullSutraSheetBackdrop").classList.add("hidden");
+      openUploadModal();
+    });
     $("#fullSutraSheetContent")
       .querySelectorAll("[data-full-ctx]")
       .forEach((btn) => {
@@ -1338,25 +1343,26 @@
     }, stepMs);
   }
 
-  // ==================== TAB 2: 发现 · 小红书式双列瀑布流 ====================
+  // ==================== TAB 2: 发现 · 极简双列画廊瀑布流 ====================
   function buildMasonryList() {
     const query = ($("#discoverSearch").value || "").trim().toLowerCase();
     const customVerses = getCustomVerses();
-    const all = getAllVerses();
 
-    // 当“全部”且无搜索词时，跨经交错排列（若有自建经文置前展示），让瀑布流一眼多样
+    // 当“全部”且无搜索词时，将各部经卷与自建经文交错排列，保持视效静美多样
     let pool;
     if (state.discoverFilter === "all" && !query) {
       const order = ["xinjing", "jingang", "dizang", "yaoshi"];
-      const buckets = order.map((s) => DATA.VERSES.filter((v) => v.sutra === s));
-      const maxLen = Math.max(...buckets.map((b) => b.length));
+      const builtInBuckets = order.map((s) => DATA.VERSES.filter((v) => v.sutra === s));
+      const customBuckets = (state.customSutras || []).map((cs) => customVerses.filter((v) => v.sutra === cs.id)).filter((b) => b.length > 0);
+      const buckets = [...builtInBuckets, ...customBuckets];
+      const maxLen = buckets.length ? Math.max(...buckets.map((b) => b.length)) : 0;
       const interleaved = [];
       for (let i = 0; i < maxLen; i++) {
         buckets.forEach((b) => {
           if (b[i]) interleaved.push(b[i]);
         });
       }
-      pool = [...customVerses, ...interleaved];
+      pool = interleaved;
     } else {
       pool = [...customVerses, ...DATA.VERSES];
     }
@@ -1374,74 +1380,37 @@
     });
   }
 
-  function buildXhsCardHtml(v, idx, listIds) {
+  function buildXhsCardHtml(v, idx) {
     const isLiked = state.likedIds.includes(v.id);
     const likeCount = formatCount(v.likes + (isLiked ? 1 : 0));
-    const headline = v.cardTitle || v.plain.takeaway;
-    const skins = ["paper", "sage", "bronze", "cinnabar"];
-    const skin = skins[idx % skins.length];
-    const dot = sutraDotColor(v.sutra);
-
-    // 4 种错落卡片原型循环：金句封面 / 典故公案 / 一语点破 / 梵文词源
-    const archetypeOrder = v.isCustom
-      ? ["quote", "insight"]
-      : ["quote", "story", "insight", "sanskrit"];
-    const type = archetypeOrder[idx % archetypeOrder.length];
-
-    let topHtml = "";
-    let bodyTitle = headline;
-    let estHeight = 190;
-
-    if (type === "quote") {
-      topHtml = `
-        <div class="xhs-cover skin-${skin}">
-          <div class="xhs-cover-quote">${v.text}</div>
-          <svg class="xhs-wm" width="64" height="64" viewBox="0 0 100 100" fill="none">
-            <path d="M74 26C62 14 40 13 26 26C12 39 12 62 25 75C38 88 61 88 75 74C86 63 87 43 77 32" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-          </svg>
-        </div>
-      `;
-      estHeight = 205 + Math.min(40, v.text.length * 0.6);
-    } else if (type === "story") {
-      topHtml = `
-        <div class="xhs-story-top">
-          <span class="xhs-tag-pill">典故</span>
-          <h3 class="xhs-story-title">${headline}</h3>
-          <p class="xhs-story-excerpt">${v.didYouKnow}</p>
-        </div>
-      `;
-      bodyTitle = "";
-      estHeight = 195;
-    } else if (type === "insight") {
-      topHtml = `
-        <div class="xhs-insight-top">
-          <p class="xhs-insight-lead">${v.plain.takeaway}</p>
-          <p class="xhs-insight-sub">“${v.text}”</p>
-        </div>
-      `;
-      bodyTitle = "";
-      estHeight = 155;
-    } else {
-      topHtml = `
-        <div class="xhs-sanskrit-band">
-          <div class="xhs-skt-term">${v.sanskrit.term}</div>
-          <div class="xhs-skt-roman">${v.sanskrit.roman}</div>
-        </div>
-      `;
-      estHeight = 180;
+    const skin = `skin-${idx % 4}`;
+    const len = v.text.length;
+    let ratioClass = "ratio-mid";
+    let estHeight = 192;
+    if (len <= 18) {
+      ratioClass = "ratio-short";
+      estHeight = 162;
+    } else if (len > 34) {
+      ratioClass = "ratio-tall";
+      estHeight = 222;
     }
 
-    const heartIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="${isLiked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+    const bodyTitle = v.isCustom ? (state.customVerseNotes && state.customVerseNotes[v.id]) || "" : v.cardTitle || "";
+    if (!bodyTitle) estHeight -= 24;
+
+    const heartIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="${isLiked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 
     return {
       estHeight,
       html: `
-        <article class="xhs-card" data-xhs-idx="${idx}" data-xhs-id="${v.id}">
-          ${topHtml}
+        <article class="xhs-card" data-xhs-id="${v.id}">
+          <div class="xhs-cover ${skin} ${ratioClass}">
+            <div class="xhs-cover-quote">${v.text}</div>
+          </div>
           <div class="xhs-body">
-            ${bodyTitle ? `<h3 class="xhs-title">${bodyTitle}</h3>` : ""}
+            ${bodyTitle ? `<p class="xhs-title">${bodyTitle}</p>` : ""}
             <div class="xhs-foot">
-              <span class="xhs-sutra-badge"><span class="sutra-dot" style="background:${dot};"></span>${v.sutraName}</span>
+              <span class="xhs-sutra-name">${v.sutraName}</span>
               <button class="xhs-like-btn ${isLiked ? "liked" : ""}" data-xhs-like="${v.id}" type="button" aria-label="珍藏">${heartIcon}<span>${likeCount}</span></button>
             </div>
           </div>
@@ -1450,14 +1419,31 @@
     };
   }
 
+  function jumpFromDiscoverToFeed(verseId) {
+    const target = getVerseById(verseId);
+    const currentList = getFeedList();
+    const inCurrent = currentList.some((item) => item.id === verseId);
+    state.filterLikedOnly = false;
+    if (!inCurrent) {
+      state.sutraMode = target.sutra;
+    }
+    state.currentVerseId = verseId;
+    saveState();
+    switchTab("feed");
+    renderFeed();
+  }
+
   function renderDiscover() {
+    const scrollBox = $("#viewDiscover .discover-scroll");
+    const prevScrollTop = scrollBox ? scrollBox.scrollTop : 0;
+
     const filters = [
       { id: "all", label: "全部" },
-      { id: "焦虑内耗", label: "焦虑内耗" },
-      { id: "执念难放", label: "执念难放" },
-      { id: "身心安康", label: "身心安康" },
-      { id: "失眠静心", label: "失眠静心" },
-      { id: "人际无常", label: "人际无常" }
+      { id: "焦虑内耗", label: "减压" },
+      { id: "执念难放", label: "放下" },
+      { id: "身心安康", label: "安康" },
+      { id: "失眠静心", label: "静眠" },
+      { id: "人际无常", label: "处世" }
     ];
     if ((state.customSutras || []).length > 0) {
       filters.push({ id: "custom", label: "自建" });
@@ -1468,7 +1454,7 @@
     const bar = $("#discoverFilterBar");
     bar.innerHTML = filters
       .map(
-        (f) => `<button class="filter-pill ${state.discoverFilter === f.id ? "active" : ""}" data-filter-id="${f.id}" type="button">${f.label}</button>`
+        (f) => `<button class="discover-tab ${state.discoverFilter === f.id ? "active" : ""}" data-filter-id="${f.id}" type="button">${f.label}</button>`
       )
       .join("");
 
@@ -1481,7 +1467,6 @@
     });
 
     const filtered = buildMasonryList();
-    const filteredIds = filtered.map((v) => v.id);
     const masonryEl = $("#discoverMasonry");
     const emptyEl = $("#discoverEmpty");
 
@@ -1495,7 +1480,7 @@
     const cols = ["", ""];
     const heights = [0, 0];
     filtered.forEach((v, idx) => {
-      const built = buildXhsCardHtml(v, idx, filteredIds);
+      const built = buildXhsCardHtml(v, idx);
       const targetCol = heights[0] <= heights[1] ? 0 : 1;
       cols[targetCol] += built.html;
       heights[targetCol] += built.estHeight;
@@ -1506,6 +1491,8 @@
       <div class="masonry-col">${cols[1]}</div>
     `;
 
+    if (scrollBox) scrollBox.scrollTop = prevScrollTop;
+
     masonryEl.querySelectorAll("[data-xhs-like]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1513,9 +1500,9 @@
       });
     });
 
-    masonryEl.querySelectorAll("[data-xhs-idx]").forEach((card) => {
+    masonryEl.querySelectorAll("[data-xhs-id]").forEach((card) => {
       card.addEventListener("click", () => {
-        openDiscoverCards(filteredIds, Number(card.dataset.xhsIdx));
+        jumpFromDiscoverToFeed(card.dataset.xhsId);
       });
     });
   }
@@ -1855,15 +1842,25 @@
     $("#actComment").addEventListener("click", () => openCommentSheet(state.currentVerseId));
     $("#actShare").addEventListener("click", () => openSnapshotModal(state.currentVerseId));
 
-    // Discover 搜索、全经弹窗与瀑布流联动
+    // Discover 折叠搜索、全经弹窗与瀑布流联动
+    const searchWrap = $("#discoverSearchWrap");
     const searchInput = $("#discoverSearch");
+    $("#btnToggleDiscoverSearch").addEventListener("click", () => {
+      const willOpen = searchWrap.classList.contains("hidden");
+      searchWrap.classList.toggle("hidden", !willOpen);
+      if (willOpen) {
+        searchInput.focus();
+      } else if (searchInput.value.trim()) {
+        searchInput.value = "";
+        renderDiscover();
+      }
+    });
     searchInput.addEventListener("input", () => {
-      $("#searchClear").classList.toggle("hidden", !searchInput.value.trim());
       renderDiscover();
     });
-    $("#searchClear").addEventListener("click", () => {
+    $("#searchCancel").addEventListener("click", () => {
       searchInput.value = "";
-      $("#searchClear").classList.add("hidden");
+      searchWrap.classList.add("hidden");
       renderDiscover();
     });
     $("#btnOpenFullSutraPicker").addEventListener("click", openFullSutraSheet);

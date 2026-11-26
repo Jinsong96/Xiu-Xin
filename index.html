@@ -129,26 +129,32 @@
             </aside>
           </main>
 
-          <!-- ==================== TAB 2: 发现 (小红书式瀑布流) ==================== -->
+          <!-- ==================== TAB 2: 发现 (极简金句瀑布流) ==================== -->
           <section class="view view-discover" id="viewDiscover" aria-label="发现">
             <div class="subpage-scroll discover-scroll">
               <div class="discover-header">
                 <h1>发现</h1>
-                <button class="hairline-pill-btn" id="btnOpenFullSutraPicker" type="button">
-                  <span>全经</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
+                <div class="discover-actions">
+                  <button class="icon-ghost" id="btnToggleDiscoverSearch" type="button" title="搜索" aria-label="搜索">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                  </button>
+                  <button class="discover-sutra-btn" id="btnOpenFullSutraPicker" type="button">全经</button>
+                </div>
               </div>
 
-              <div class="search-box">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input type="search" id="discoverSearch" placeholder="搜索经句、经卷或心境" autocomplete="off" />
-                <button class="search-clear hidden" id="searchClear" type="button">清除</button>
+              <div class="discover-search-wrap hidden" id="discoverSearchWrap">
+                <div class="search-box discover-search-box">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input type="search" id="discoverSearch" placeholder="搜索经句或经卷" autocomplete="off" />
+                  <button class="search-clear" id="searchCancel" type="button">取消</button>
+                </div>
               </div>
 
-              <div class="filter-pill-bar" id="discoverFilterBar"></div>
+              <div class="discover-tabs" id="discoverFilterBar"></div>
 
               <div class="mine-empty hidden" id="discoverEmpty">未见匹配经句</div>
               <div class="masonry-grid" id="discoverMasonry"></div>
