@@ -86,7 +86,7 @@
                   </svg>
                 </button>
                 <button class="sutra-pill" id="btnSutraPicker" type="button">
-                  <span id="sutraPillLabel">心经 1/9</span>
+                  <span id="sutraPillLabel">心经 1/10</span>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
@@ -129,78 +129,29 @@
             </aside>
           </main>
 
-          <!-- ==================== TAB 2: 发现 (Discover) ==================== -->
+          <!-- ==================== TAB 2: 发现 (小红书式瀑布流) ==================== -->
           <section class="view view-discover" id="viewDiscover" aria-label="发现">
-            <div class="subpage-scroll">
-              <div class="page-header">
+            <div class="subpage-scroll discover-scroll">
+              <div class="discover-header">
                 <h1>发现</h1>
+                <button class="hairline-pill-btn" id="btnOpenFullSutraPicker" type="button">
+                  <span>全经</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
               </div>
 
               <div class="search-box">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="search" id="discoverSearch" placeholder="搜索经句或心境" autocomplete="off" />
+                <input type="search" id="discoverSearch" placeholder="搜索经句、经卷或心境" autocomplete="off" />
                 <button class="search-clear hidden" id="searchClear" type="button">清除</button>
               </div>
 
-              <div id="searchResultsWrap" class="hidden">
-                <div class="section-head">
-                  <h2>检索</h2>
-                  <span class="section-meta" id="searchResultCount"></span>
-                </div>
-                <div class="search-results-list" id="searchResultsList"></div>
-              </div>
+              <div class="filter-pill-bar" id="discoverFilterBar"></div>
 
-              <div id="discoverDefaultBody">
-                <div class="section-head">
-                  <h2>此刻心境</h2>
-                </div>
-                <div class="h-scroll mood-rail" id="moodRail"></div>
-
-                <div class="section-head">
-                  <h2>随缘一刷</h2>
-                  <button class="link-btn" id="btnStartDiscoverCards" type="button">
-                    <span>随缘开刷</span>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                </div>
-                <div class="h-scroll story-rail" id="storyRail"></div>
-
-                <div class="section-head">
-                  <h2>全经脉络</h2>
-                </div>
-                <div class="entry-cards">
-                  <button class="entry-row-card" id="btnOpenContextXinjing" type="button">
-                    <div>
-                      <strong>般若波罗蜜多心经</strong>
-                      <span>玄奘译 · 二百六十字全篇</span>
-                    </div>
-                    <svg class="chev-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                  <button class="entry-row-card" id="btnOpenContextJingang" type="button">
-                    <div>
-                      <strong>金刚般若波罗蜜经</strong>
-                      <span>鸠摩罗什译 · 核心九分</span>
-                    </div>
-                    <svg class="chev-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                  <button class="entry-row-card" id="btnOpenContextDizang" type="button">
-                    <div>
-                      <strong>地藏菩萨本愿经</strong>
-                      <span>实叉难陀译 · 核心九品</span>
-                    </div>
-                    <svg class="chev-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                  <button class="entry-row-card" id="btnOpenContextYaoshi" type="button">
-                    <div>
-                      <strong>药师琉璃光如来本愿功德经</strong>
-                      <span>玄奘译 · 核心九愿</span>
-                    </div>
-                    <svg class="chev-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </button>
-                </div>
-              </div>
+              <div class="mine-empty hidden" id="discoverEmpty">未见匹配经句</div>
+              <div class="masonry-grid" id="discoverMasonry"></div>
             </div>
           </section>
 
@@ -251,6 +202,14 @@
                   <strong id="mineProTitle">梵文词源 · 异译对照</strong>
                 </div>
                 <button class="pro-cta-btn" id="btnOpenPaywallFromMine" type="button">了解</button>
+              </div>
+
+              <div class="mine-custom-block">
+                <div class="mine-custom-header">
+                  <span class="section-label" style="margin:0;">自建经卷</span>
+                  <button class="link-btn" id="btnOpenUploadFromMine" type="button">+ 上传经文</button>
+                </div>
+                <div class="mine-custom-list" id="mineCustomList"></div>
               </div>
 
               <div class="mine-seg">
@@ -326,11 +285,19 @@
             </div>
           </div>
 
-          <!-- ==================== Bottom Sheet: 经卷 ==================== -->
+          <!-- ==================== Bottom Sheet: 经卷与跳句 ==================== -->
           <div class="sheet-backdrop hidden" id="sutraSheetBackdrop">
-            <div class="bottom-sheet" id="sutraSheet" role="dialog" aria-modal="true">
+            <div class="bottom-sheet tall-sheet" id="sutraSheet" role="dialog" aria-modal="true">
               <div class="sheet-handle"></div>
               <div id="sutraSheetContent"></div>
+            </div>
+          </div>
+
+          <!-- ==================== Bottom Sheet: 全经脉络入口 ==================== -->
+          <div class="sheet-backdrop hidden" id="fullSutraSheetBackdrop">
+            <div class="bottom-sheet" id="fullSutraSheet" role="dialog" aria-modal="true">
+              <div class="sheet-handle"></div>
+              <div id="fullSutraSheetContent"></div>
             </div>
           </div>
 
@@ -339,6 +306,59 @@
             <div class="bottom-sheet tall-sheet" id="commentSheet" role="dialog" aria-modal="true">
               <div class="sheet-handle"></div>
               <div id="commentSheetContent"></div>
+            </div>
+          </div>
+
+          <!-- ==================== 上传经文 Modal ==================== -->
+          <div class="modal-backdrop hidden" id="uploadModalBackdrop">
+            <div class="full-modal" id="uploadModal">
+              <div class="modal-topbar">
+                <h3>上传经文</h3>
+                <button class="pill-close-btn" id="btnCloseUploadModal" type="button">取消</button>
+              </div>
+              <div class="upload-scroll">
+                <div class="upload-toolbar">
+                  <label class="upload-tool-btn" for="uploadFileInput">
+                    <span>导入 TXT / MD</span>
+                    <input type="file" id="uploadFileInput" accept=".txt,.md,.text" hidden />
+                  </label>
+                  <button class="upload-tool-btn" id="btnFillSampleUpload" type="button">试填《六祖坛经》</button>
+                </div>
+
+                <div class="upload-field">
+                  <label for="uploadTitleInput">经卷名称</label>
+                  <input type="text" id="uploadTitleInput" class="upload-input" placeholder="如：六祖坛经 / 道德经" maxlength="24" />
+                </div>
+
+                <div class="upload-field">
+                  <label for="uploadAuthorInput">译者或出处（选填）</label>
+                  <input type="text" id="uploadAuthorInput" class="upload-input" placeholder="如：六祖惠能 / 个人抄录" maxlength="32" />
+                </div>
+
+                <div class="upload-field">
+                  <label for="uploadTextArea">经文正文</label>
+                  <textarea id="uploadTextArea" class="upload-textarea" placeholder="粘贴经文内容；每行或每句将自动拆分为独立一屏…"></textarea>
+                </div>
+
+                <div class="upload-field">
+                  <label>分屏方式</label>
+                  <div class="mine-seg" style="margin-bottom:0;">
+                    <button class="seg-btn active" data-split-mode="newline" type="button">按换行分段</button>
+                    <button class="seg-btn" data-split-mode="sentence" type="button">按句号智能分屏</button>
+                  </div>
+                </div>
+
+                <div class="upload-preview-box">
+                  <div class="up-head">
+                    <span>分屏预览</span>
+                    <strong id="uploadPreviewCount">将切分为 0 屏</strong>
+                  </div>
+                  <div class="up-samples" id="uploadPreviewSamples"></div>
+                </div>
+              </div>
+              <div class="upload-footer">
+                <button class="black-cta-btn" id="btnSaveUpload" type="button">保存并开始阅读</button>
+              </div>
             </div>
           </div>
 
@@ -444,12 +464,14 @@
         <button class="ctrl-btn" id="deskReplayOnboard" type="button">初见</button>
         <button class="ctrl-btn" id="deskToggleTheme" type="button">昼夜</button>
         <button class="ctrl-btn" id="deskSwitchSutra" type="button">换经</button>
-        <button class="ctrl-btn accent" id="deskOpenPaywall" type="button">Pro</button>
+        <button class="ctrl-btn" id="deskOpenUpload" type="button">上传</button>
+        <button class="ctrl-btn accent span-2" id="deskOpenPaywall" type="button">Pro</button>
       </div>
     </aside>
   </div>
 
   <script src="data.js"></script>
+  <script src="data-extra.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-// 「一念 · Scroll Dharma」核心交互逻辑
+// 「一念 · Xiu Xin」核心交互逻辑
 (function () {
   const DATA = window.DHARMA_DATA;
-  const STORAGE_KEY = "scroll_dharma_demo_v1";
+  const STORAGE_KEY = "scroll_dharma_demo_v2";
 
   const CHEVRON_RIGHT = `<svg class="chev-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
   const SUN_SVG = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="21.5"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2.5" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="21.5" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>`;
@@ -17,6 +17,9 @@
     bookmarkedIds: [],
     readIds: ["xj-1"],
     customComments: {},
+    customSutras: [],
+    customVerseNotes: {},
+    discoverFilter: "all",
     activePlanId: "plan-xinjing",
     mineSubTab: "liked",
     proUnlocked: false,
@@ -27,9 +30,10 @@
 
   function loadState() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("scroll_dharma_demo_v1");
       if (!raw) return { ...defaultState };
-      return { ...defaultState, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      return { ...defaultState, ...parsed };
     } catch (_) {
       return { ...defaultState };
     }
@@ -50,18 +54,92 @@
   let studySubView = "menu";
   let commentVerseId = null;
   let selectedPaywallPlan = "yearly";
+  let uploadSplitMode = "newline";
   let toastTimer = null;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+  // ==================== 自建经文整合 ====================
+  function getCustomVerses() {
+    const out = [];
+    (state.customSutras || []).forEach((cs) => {
+      cs.segments.forEach((seg, idx) => {
+        const vid = `${cs.id}-${idx + 1}`;
+        const note = (state.customVerseNotes && state.customVerseNotes[vid]) || "";
+        out.push({
+          id: vid,
+          sutra: cs.id,
+          sutraName: cs.title,
+          sutraFullName: cs.title,
+          chapter: `第 ${idx + 1} 屏`,
+          indexInSutra: idx + 1,
+          cardTitle: seg.slice(0, 18) + (seg.length > 18 ? "…" : ""),
+          text: seg,
+          isRedLetter: idx === 0,
+          moodTags: ["自建"],
+          isCustom: true,
+          author: cs.author || "个人上传",
+          plain: {
+            literal: note || "暂未填写释义，可在下方写下你对这句经文的理解。",
+            takeaway: "自建经句 · 随时记录个人一念批注"
+          },
+          sanskrit: {
+            term: cs.title,
+            roman: cs.author || "个人上传",
+            literal: "支持竖滑静读、全篇上下文定位与生成禅意日签。",
+            insight: "在「白话释义」中可以随时写下并保存属于你自己的注释。"
+          },
+          deepStudy: {
+            meaning: note || seg,
+            history: cs.author ? `出处 / 译者：${cs.author}` : "用户自行上传整理的经典段落。",
+            applyIt: "点击下方工具，将此句设为锁屏组件或保存禅意日签。"
+          },
+          didYouKnow: cs.author
+            ? `自建经卷《${cs.title}》（${cs.author}），共 ${cs.segments.length} 屏。`
+            : `个人上传经卷《${cs.title}》，共 ${cs.segments.length} 屏。`,
+          relatedIds: [],
+          altVersion: {
+            translator: cs.author || "原文录入",
+            text: seg
+          },
+          likes: 1,
+          comments: []
+        });
+      });
+    });
+    return out;
+  }
+
+  function getAllVerses() {
+    return [...DATA.VERSES, ...getCustomVerses()];
+  }
+
   function getVerseById(id) {
-    return DATA.VERSES.find((v) => v.id === id) || DATA.VERSES[0];
+    return getAllVerses().find((v) => v.id === id) || DATA.VERSES[0];
+  }
+
+  function getAllSutrasMeta() {
+    const builtIn = [
+      { id: "xinjing", label: "心经", fullTitle: "般若波罗蜜多心经", subtitle: "唐 · 玄奘译", count: DATA.VERSES.filter((v) => v.sutra === "xinjing").length, isCustom: false },
+      { id: "jingang", label: "金刚经", fullTitle: "金刚般若波罗蜜经", subtitle: "姚秦 · 鸠摩罗什译", count: DATA.VERSES.filter((v) => v.sutra === "jingang").length, isCustom: false },
+      { id: "dizang", label: "地藏经", fullTitle: "地藏菩萨本愿经", subtitle: "唐 · 实叉难陀译", count: DATA.VERSES.filter((v) => v.sutra === "dizang").length, isCustom: false },
+      { id: "yaoshi", label: "药师经", fullTitle: "药师琉璃光如来本愿功德经", subtitle: "唐 · 玄奘译", count: DATA.VERSES.filter((v) => v.sutra === "yaoshi").length, isCustom: false }
+    ];
+    const custom = (state.customSutras || []).map((cs) => ({
+      id: cs.id,
+      label: cs.title,
+      fullTitle: cs.title,
+      subtitle: cs.author || "个人上传",
+      count: cs.segments.length,
+      isCustom: true
+    }));
+    return [...builtIn, ...custom];
   }
 
   function getCommentsForVerse(verse) {
     const extra = state.customComments[verse.id] || [];
-    return [...extra, ...verse.comments];
+    return [...extra, ...(verse.comments || [])];
   }
 
   function formatCount(n) {
@@ -75,6 +153,16 @@
     return v.chapter.split(" · ")[1] || v.chapter;
   }
 
+  function sutraDotColor(sutraKey) {
+    const map = {
+      xinjing: "#A63429",
+      jingang: "#B08446",
+      dizang: "#52627A",
+      yaoshi: "#4F6D60"
+    };
+    return map[sutraKey] || "#7D6B5D";
+  }
+
   function showToast(msg) {
     const el = $("#toast");
     el.textContent = msg;
@@ -84,13 +172,18 @@
   }
 
   function getFeedList() {
+    const all = getAllVerses();
     let list;
-    const singleSutras = ["xinjing", "jingang", "dizang", "yaoshi"];
-    if (singleSutras.includes(state.sutraMode)) {
-      list = DATA.VERSES.filter((v) => v.sutra === state.sutraMode);
+    if (state.sutraMode !== "mixed") {
+      list = all.filter((v) => v.sutra === state.sutraMode);
+      if (list.length === 0) {
+        state.sutraMode = "xinjing";
+        list = all.filter((v) => v.sutra === "xinjing");
+      }
     } else {
-      const buckets = singleSutras.map((s) => DATA.VERSES.filter((v) => v.sutra === s));
-      const maxLen = Math.max(...buckets.map((b) => b.length));
+      const sutraOrder = getAllSutrasMeta().map((s) => s.id);
+      const buckets = sutraOrder.map((id) => all.filter((v) => v.sutra === id));
+      const maxLen = Math.max(0, ...buckets.map((b) => b.length));
       list = [];
       for (let i = 0; i < maxLen; i++) {
         buckets.forEach((b) => {
@@ -166,6 +259,18 @@
   // ==================== TAB 1: 主经流渲染与观测 ====================
   let feedObserver = null;
 
+  function buildRulerAnchors(total) {
+    if (total <= 20) {
+      return Array.from({ length: total }, (_, i) => i);
+    }
+    const count = 15;
+    const anchors = [];
+    for (let k = 0; k < count; k++) {
+      anchors.push(Math.round((k * (total - 1)) / (count - 1)));
+    }
+    return Array.from(new Set(anchors));
+  }
+
   function renderFeed() {
     const scrollEl = $("#feedScroll");
     const rulerEl = $("#verseRuler");
@@ -199,13 +304,15 @@
       })
       .join("");
 
-    // 左侧节号标尺（仅首末显示数字，中间平时静默微点，当前节展开数字胶囊）
-    rulerEl.classList.toggle("dense", list.length > 12);
-    rulerEl.innerHTML = list
-      .map((v, idx) => {
-        const label = String(idx + 1).padStart(2, "0");
-        const isEdge = idx === 0 || idx === list.length - 1;
-        return `<button class="ruler-tick" data-jump-idx="${idx}" data-label="${label}" data-edge="${isEdge}" type="button" aria-label="${v.sutraName} 第${idx + 1}句">${isEdge ? label : '<span class="ruler-dot"></span>'}</button>`;
+    // 智能左侧标尺（<=20 全显；>20 等距采样 15 个锚点，避免拥挤溢出）
+    const anchors = buildRulerAnchors(list.length);
+    rulerEl.classList.toggle("dense", list.length > 12 && list.length <= 20);
+    rulerEl.innerHTML = anchors
+      .map((anchorIdx) => {
+        const v = list[anchorIdx];
+        const label = String(anchorIdx + 1).padStart(2, "0");
+        const isEdge = anchorIdx === 0 || anchorIdx === list.length - 1;
+        return `<button class="ruler-tick" data-jump-idx="${anchorIdx}" data-label="${label}" data-edge="${isEdge}" type="button" aria-label="${v.sutraName} 第${anchorIdx + 1}句">${isEdge ? label : '<span class="ruler-dot"></span>'}</button>`;
       })
       .join("");
 
@@ -253,11 +360,28 @@
     const modePrefix = state.sutraMode === "mixed" ? "合流" : v.sutraName;
     $("#sutraPillLabel").textContent = `${modePrefix} ${idx + 1}/${total}`;
 
-    $$(".ruler-tick").forEach((t, i) => {
-      const isActive = i === idx;
+    // 将高亮状态精确吸附到最近的标尺锚点，并显示当前实时节号
+    const ticks = $$(".ruler-tick");
+    let closestTick = ticks[0];
+    let minDist = Infinity;
+    ticks.forEach((t) => {
+      const dist = Math.abs(Number(t.dataset.jumpIdx) - idx);
+      if (dist < minDist) {
+        minDist = dist;
+        closestTick = t;
+      }
+    });
+
+    const activeLabel = String(idx + 1).padStart(2, "0");
+    ticks.forEach((t) => {
+      const isActive = t === closestTick;
       const isEdge = t.dataset.edge === "true";
       t.classList.toggle("active", isActive);
-      t.innerHTML = isActive || isEdge ? t.dataset.label : `<span class="ruler-dot"></span>`;
+      if (isActive) {
+        t.textContent = activeLabel;
+      } else {
+        t.innerHTML = isEdge ? t.dataset.label : `<span class="ruler-dot"></span>`;
+      }
     });
 
     $("#btnTopBookmark").classList.toggle("bookmarked", state.bookmarkedIds.includes(verseId));
@@ -324,6 +448,7 @@
       const idx = Math.max(0, list.findIndex((v) => v.id === id));
       onActiveVerseChanged(id, idx, list.length);
     }
+    if (state.activeTab === "discover") renderDiscover();
     if (state.activeTab === "plans") renderPlans();
     if (state.activeTab === "mine") renderMine();
   }
@@ -342,7 +467,7 @@
     if (state.activeTab === "mine") renderMine();
   }
 
-  // ==================== Bottom Sheet: 轻触解经 (极简高定版) ====================
+  // ==================== Bottom Sheet: 轻触解经 ====================
   function openStudySheet(verseId, subView = "menu") {
     studyVerseId = verseId;
     studySubView = subView;
@@ -374,7 +499,7 @@
     const wrap = $("#studySheetContent");
 
     if (studySubView === "menu") {
-      const proTag = state.proUnlocked ? "" : `<span class="pro-micro-tag">PRO</span>`;
+      const proTag = state.proUnlocked || v.isCustom ? "" : `<span class="pro-micro-tag">PRO</span>`;
       wrap.innerHTML = `
         <div class="sheet-top-row">
           <button class="sheet-text-btn" id="btnCancelStudySheet" type="button">取消</button>
@@ -389,7 +514,7 @@
           <button class="sheet-menu-item" data-study-action="plain" type="button">
             <span class="sheet-item-left">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.7.6 1 1.4 1 2.3h6c0-.9.3-1.7 1-2.3A7 7 0 0 0 12 2z"/></svg>
-              <span>白话释义</span>
+              <span>${v.isCustom ? "个人释义" : "白话释义"}</span>
             </span>
             <span class="sheet-item-right">${CHEVRON_RIGHT}</span>
           </button>
@@ -397,7 +522,7 @@
           <button class="sheet-menu-item" data-study-action="sanskrit" type="button">
             <span class="sheet-item-left">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 10h6"/><path d="M12 7v6"/></svg>
-              <span>梵文词源</span>
+              <span>${v.isCustom ? "出处与概况" : "梵文词源"}</span>
             </span>
             <span class="sheet-item-right">${proTag}${CHEVRON_RIGHT}</span>
           </button>
@@ -410,13 +535,17 @@
             <span class="sheet-item-right">${CHEVRON_RIGHT}</span>
           </button>
 
-          <button class="sheet-menu-item" data-study-action="related" type="button">
-            <span class="sheet-item-left">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-              <span>关联经句</span>
-            </span>
-            <span class="sheet-item-right">${CHEVRON_RIGHT}</span>
-          </button>
+          ${
+            v.relatedIds.length > 0
+              ? `<button class="sheet-menu-item" data-study-action="related" type="button">
+                  <span class="sheet-item-left">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <span>关联经句</span>
+                  </span>
+                  <span class="sheet-item-right">${CHEVRON_RIGHT}</span>
+                </button>`
+              : ""
+          }
         </div>
 
         <div class="sheet-divider"></div>
@@ -460,7 +589,7 @@
       wrap.querySelectorAll("[data-study-action]").forEach((btn) => {
         btn.addEventListener("click", () => {
           const act = btn.dataset.studyAction;
-          if (act === "sanskrit") {
+          if (act === "sanskrit" && !v.isCustom) {
             handleProFeatureAccess(() => {
               studySubView = "sanskrit";
               renderStudySheet();
@@ -486,8 +615,8 @@
     }
 
     const titles = {
-      plain: "白话释义",
-      sanskrit: "梵文词源",
+      plain: v.isCustom ? "个人释义" : "白话释义",
+      sanskrit: v.isCustom ? "出处与概况" : "梵文词源",
       deep: "深解义理",
       related: "关联经句"
     };
@@ -502,22 +631,41 @@
 
     let bodyHtml = "";
     if (studySubView === "plain") {
-      bodyHtml = `
-        <div class="study-detail-body">
-          <div class="editorial-sec first">
-            <div class="ed-label">译文</div>
-            <p class="ed-body">${v.plain.literal}</p>
+      if (v.isCustom) {
+        const currentNote = (state.customVerseNotes && state.customVerseNotes[v.id]) || "";
+        bodyHtml = `
+          <div class="study-detail-body">
+            <div class="editorial-sec first">
+              <div class="ed-label">原文</div>
+              <p class="ed-body serif">${v.text}</p>
+            </div>
+            <div class="editorial-sec">
+              <div class="ed-label">写下我的批注</div>
+              <div class="custom-note-form">
+                <textarea id="customNoteInput" placeholder="记录你对这句自建经文的理解、翻译或感想…">${currentNote}</textarea>
+                <button class="black-cta-btn" id="btnSaveCustomNote" type="button" style="height:40px;font-size:13.5px;">保存批注</button>
+              </div>
+            </div>
           </div>
-          <div class="editorial-sec ed-callout sage">
-            <div class="ed-label">点破</div>
-            <p class="ed-body">${v.plain.takeaway}</p>
+        `;
+      } else {
+        bodyHtml = `
+          <div class="study-detail-body">
+            <div class="editorial-sec first">
+              <div class="ed-label">译文</div>
+              <p class="ed-body">${v.plain.literal}</p>
+            </div>
+            <div class="editorial-sec ed-callout sage">
+              <div class="ed-label">点破</div>
+              <p class="ed-body">${v.plain.takeaway}</p>
+            </div>
+            <div class="editorial-sec">
+              <div class="ed-label">${v.altVersion.translator}</div>
+              <p class="ed-body serif">${v.altVersion.text}</p>
+            </div>
           </div>
-          <div class="editorial-sec">
-            <div class="ed-label">${v.altVersion.translator}</div>
-            <p class="ed-body serif">${v.altVersion.text}</p>
-          </div>
-        </div>
-      `;
+        `;
+      }
     } else if (studySubView === "sanskrit") {
       bodyHtml = `
         <div class="study-detail-body">
@@ -526,11 +674,11 @@
             <div class="sanskrit-roman">${v.sanskrit.roman}</div>
           </div>
           <div class="editorial-sec">
-            <div class="ed-label">词根</div>
+            <div class="ed-label">${v.isCustom ? "简介" : "词根"}</div>
             <p class="ed-body">${v.sanskrit.literal}</p>
           </div>
           <div class="editorial-sec">
-            <div class="ed-label">微意</div>
+            <div class="ed-label">${v.isCustom ? "提示" : "微意"}</div>
             <p class="ed-body">${v.sanskrit.insight}</p>
           </div>
         </div>
@@ -577,6 +725,18 @@
       renderStudySheet();
     });
     $("#btnCloseStudyDetail").addEventListener("click", closeStudySheet);
+
+    const saveNoteBtn = $("#btnSaveCustomNote");
+    if (saveNoteBtn) {
+      saveNoteBtn.addEventListener("click", () => {
+        if (!state.customVerseNotes) state.customVerseNotes = {};
+        state.customVerseNotes[v.id] = $("#customNoteInput").value.trim();
+        saveState();
+        showToast("批注已保存");
+        if (state.activeTab === "discover") renderDiscover();
+      });
+    }
+
     wrap.querySelectorAll("[data-jump-verse]").forEach((card) => {
       card.addEventListener("click", () => {
         const targetId = card.dataset.jumpVerse;
@@ -601,28 +761,40 @@
   function renderSutraSheet() {
     const list = getFeedList();
     const wrap = $("#sutraSheetContent");
-    const modes = [
-      { id: "xinjing", label: "心经" },
-      { id: "jingang", label: "金刚经" },
-      { id: "dizang", label: "地藏经" },
-      { id: "yaoshi", label: "药师经" }
-    ];
+    const metas = getAllSutrasMeta();
+    const builtIn = metas.filter((m) => !m.isCustom);
+    const custom = metas.filter((m) => m.isCustom);
+    const totalCount = getAllVerses().length;
 
     wrap.innerHTML = `
       <div class="sheet-top-row">
+        <button class="sheet-text-btn" id="btnOpenUploadFromSutra" type="button">+ 上传</button>
         <span class="sheet-nav-title">经卷</span>
         <button class="sheet-text-btn accent" id="btnCloseSutraSheet" type="button">完成</button>
       </div>
       <div class="sutra-switch-grid">
-        ${modes
+        ${builtIn
           .map(
             (m) => `
-          <button class="sutra-mode-btn ${state.sutraMode === m.id ? "active" : ""}" data-sutra-mode="${m.id}" type="button">${m.label}</button>
+          <button class="sutra-mode-btn ${state.sutraMode === m.id ? "active" : ""}" data-sutra-mode="${m.id}" type="button">${m.label} ${m.count}</button>
         `
           )
           .join("")}
       </div>
-      <button class="sutra-mode-btn sutra-mode-full ${state.sutraMode === "mixed" ? "active" : ""}" data-sutra-mode="mixed" type="button">四经合流 · ${DATA.VERSES.length} 屏</button>
+      ${
+        custom.length > 0
+          ? `<div class="sutra-switch-grid" style="grid-template-columns:repeat(${Math.min(3, custom.length)},1fr);margin-bottom:8px;">
+              ${custom
+                .map(
+                  (m) => `
+                <button class="sutra-mode-btn ${state.sutraMode === m.id ? "active" : ""}" data-sutra-mode="${m.id}" type="button">${m.label} ${m.count}</button>
+              `
+                )
+                .join("")}
+            </div>`
+          : ""
+      }
+      <button class="sutra-mode-btn sutra-mode-full ${state.sutraMode === "mixed" ? "active" : ""}" data-sutra-mode="mixed" type="button">全部合流 · ${totalCount} 屏</button>
       <div class="jump-list">
         ${list
           .map(
@@ -638,6 +810,11 @@
     `;
 
     $("#btnCloseSutraSheet").addEventListener("click", closeSutraSheet);
+    $("#btnOpenUploadFromSutra").addEventListener("click", () => {
+      closeSutraSheet();
+      openUploadModal();
+    });
+
     wrap.querySelectorAll("[data-sutra-mode]").forEach((btn) => {
       btn.addEventListener("click", () => {
         state.sutraMode = btn.dataset.sutraMode;
@@ -657,6 +834,146 @@
         scrollToVerseId(id, true);
       });
     });
+  }
+
+  // ==================== 发现页 · 全经脉络选择抽屉 ====================
+  function openFullSutraSheet() {
+    const metas = getAllSutrasMeta();
+    $("#fullSutraSheetContent").innerHTML = `
+      <div class="sheet-top-row">
+        <span class="sheet-nav-title">全经脉络</span>
+        <button class="sheet-text-btn accent" id="btnCloseFullSutraSheet" type="button">关闭</button>
+      </div>
+      <div class="entry-cards">
+        ${metas
+          .map(
+            (m) => `
+          <button class="entry-row-card" data-full-ctx="${m.id}" type="button">
+            <div>
+              <strong>${m.fullTitle}</strong>
+              <span>${m.subtitle} · ${m.count} 屏</span>
+            </div>
+            ${CHEVRON_RIGHT}
+          </button>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+    $("#fullSutraSheetBackdrop").classList.remove("hidden");
+    $("#btnCloseFullSutraSheet").addEventListener("click", () => $("#fullSutraSheetBackdrop").classList.add("hidden"));
+    $("#fullSutraSheetContent")
+      .querySelectorAll("[data-full-ctx]")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          $("#fullSutraSheetBackdrop").classList.add("hidden");
+          openContextModal(btn.dataset.fullCtx, state.currentVerseId);
+        });
+      });
+  }
+
+  // ==================== 自定义经文上传 Modal ====================
+  function splitCustomText(raw, mode) {
+    const clean = raw.trim();
+    if (!clean) return [];
+    if (mode === "newline") {
+      return clean
+        .split(/\r?\n+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    // 按句号、问号、叹号、分号智能切分并合并短句
+    const rawPieces = clean
+      .replace(/\r?\n+/g, "")
+      .split(/([。！？；]+)/)
+      .reduce((acc, part, idx) => {
+        if (idx % 2 === 0) {
+          if (part.trim()) acc.push(part.trim());
+        } else if (acc.length > 0) {
+          acc[acc.length - 1] += part;
+        }
+        return acc;
+      }, []);
+
+    const merged = [];
+    let buf = "";
+    rawPieces.forEach((p) => {
+      if (!buf) {
+        buf = p;
+      } else if (buf.length < 16 && buf.length + p.length <= 54) {
+        buf += p;
+      } else {
+        merged.push(buf);
+        buf = p;
+      }
+    });
+    if (buf) merged.push(buf);
+    return merged;
+  }
+
+  function updateUploadPreview() {
+    const segments = splitCustomText($("#uploadTextArea").value, uploadSplitMode);
+    $("#uploadPreviewCount").textContent = `将切分为 ${segments.length} 屏`;
+    const sampleWrap = $("#uploadPreviewSamples");
+    if (segments.length === 0) {
+      sampleWrap.innerHTML = `<div style="font-size:11.5px;color:var(--ink-muted);">输入或导入经文后在此预览分屏效果</div>`;
+      return;
+    }
+    sampleWrap.innerHTML = segments
+      .slice(0, 2)
+      .map((seg, i) => `<div class="up-sample-item">${String(i + 1).padStart(2, "0")} · ${seg}</div>`)
+      .join("");
+  }
+
+  function openUploadModal() {
+    $("#uploadTitleInput").value = "";
+    $("#uploadAuthorInput").value = "";
+    $("#uploadTextArea").value = "";
+    uploadSplitMode = "newline";
+    $$("[data-split-mode]").forEach((b) => b.classList.toggle("active", b.dataset.splitMode === "newline"));
+    updateUploadPreview();
+    $("#uploadModalBackdrop").classList.remove("hidden");
+  }
+
+  function closeUploadModal() {
+    $("#uploadModalBackdrop").classList.add("hidden");
+  }
+
+  function saveUploadedSutra() {
+    const title = $("#uploadTitleInput").value.trim();
+    const author = $("#uploadAuthorInput").value.trim();
+    const rawText = $("#uploadTextArea").value.trim();
+    const segments = splitCustomText(rawText, uploadSplitMode);
+
+    if (!title) {
+      showToast("请填写经卷名称");
+      return;
+    }
+    if (segments.length === 0) {
+      showToast("请先填写经文正文");
+      return;
+    }
+
+    const id = `custom-${Date.now()}`;
+    if (!state.customSutras) state.customSutras = [];
+    state.customSutras.unshift({
+      id,
+      title,
+      author,
+      segments,
+      createdAt: Date.now()
+    });
+
+    state.sutraMode = id;
+    state.filterLikedOnly = false;
+    state.currentVerseId = `${id}-1`;
+    saveState();
+
+    closeUploadModal();
+    switchTab("feed");
+    renderFeed();
+    if (state.activeTab === "discover") renderDiscover();
+    showToast(`已收录《${title}》${segments.length} 屏`);
   }
 
   // ==================== 感悟抽屉 ====================
@@ -682,16 +999,20 @@
       </div>
       <p class="sheet-quote-sub">“${v.text}”</p>
       <div class="comment-list">
-        ${comments
-          .map(
-            (c) => `
-          <div class="comment-item">
-            <div class="comment-meta"><strong>${c.user}</strong><span>${c.time}</span></div>
-            <p>${c.text}</p>
-          </div>
-        `
-          )
-          .join("")}
+        ${
+          comments.length > 0
+            ? comments
+                .map(
+                  (c) => `
+                <div class="comment-item">
+                  <div class="comment-meta"><strong>${c.user}</strong><span>${c.time}</span></div>
+                  <p>${c.text}</p>
+                </div>
+              `
+                )
+                .join("")
+            : `<div class="mine-empty" style="padding:20px;">记下你对这句经文的第一念感悟</div>`
+        }
       </div>
       <form class="comment-form" id="commentForm">
         <input type="text" id="commentInput" placeholder="记下这一念…" maxlength="140" required />
@@ -725,7 +1046,24 @@
 
   // ==================== 全经上下文 Modal ====================
   function openContextModal(sutraKey, highlightId) {
-    const full = DATA.FULL_SUTRAS[sutraKey] || DATA.FULL_SUTRAS.xinjing;
+    let full = DATA.FULL_SUTRAS[sutraKey];
+    if (!full) {
+      const cs = (state.customSutras || []).find((c) => c.id === sutraKey);
+      if (cs) {
+        full = {
+          title: cs.title,
+          subtitle: cs.author || "个人上传",
+          segments: cs.segments.map((text, idx) => ({
+            id: `${cs.id}-${idx + 1}`,
+            prefix: `【第 ${idx + 1} 屏】`,
+            text
+          }))
+        };
+      } else {
+        full = DATA.FULL_SUTRAS.xinjing;
+      }
+    }
+
     $("#contextModalTitle").textContent = full.title;
     const body = $("#contextModalBody");
 
@@ -916,9 +1254,7 @@
 
   function renderPaywallModal(customReason) {
     const inner = $("#paywallInner");
-    const reasonText =
-      customReason ||
-      "核心竖滑读经、基础笔记与共修计划永远免费。";
+    const reasonText = customReason || "核心竖滑读经、基础笔记与共修计划永远免费。";
 
     inner.innerHTML = `
       <span class="pw-badge">一念 PRO</span>
@@ -926,7 +1262,7 @@
       <p class="pw-sub">${reasonText}</p>
 
       <div class="pw-compare">
-        <div class="pw-row"><span>四经竖滑阅读</span><strong>免费</strong></div>
+        <div class="pw-row"><span>四经及自建经文竖滑阅读</span><strong>免费</strong></div>
         <div class="pw-row"><span>梵文原典词根拆解</span><strong style="color:var(--bronze);">Pro</strong></div>
         <div class="pw-row"><span>玄奘 · 鸠摩罗什 · 实叉难陀 · 义净异译对照</span><strong style="color:var(--bronze);">Pro</strong></div>
         <div class="pw-row"><span>全套禅意日签皮肤</span><strong style="color:var(--bronze);">Pro</strong></div>
@@ -1002,99 +1338,184 @@
     }, stepMs);
   }
 
-  // ==================== TAB 2: 发现 Discover ====================
-  function getMoodIconSvg(type, color) {
-    const svgs = {
-      knot: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M12 3a4 4 0 0 0-4 4c0 3 4 5 4 5s4-2 4-5a4 4 0 0 0-4-4z"/><path d="M12 21a4 4 0 0 1-4-4c0-3 4-5 4-5s4 2 4 5a4 4 0 0 1-4 4z"/><path d="M3 12a4 4 0 0 1 4-4c3 0 5 4 5 4s-2 4-5 4a4 4 0 0 1-4-4z"/><path d="M21 12a4 4 0 0 0-4-4c-3 0-5 4-5 4s2 4 5 4a4 4 0 0 0 4-4z"/></svg>`,
-      anchor: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="6" r="2.5"/><line x1="12" y1="8.5" x2="12" y2="20"/><path d="M5 13a7 7 0 0 0 14 0"/><line x1="9" y1="12" x2="15" y2="12"/></svg>`,
-      moon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-      waves: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"><path d="M2 8c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 3-1.5 4 0"/><path d="M2 15c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 3-1.5 4 0"/></svg>`,
-      lotus: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c2.2 3 2.5 6.8 0 10.5C9.5 10.8 9.8 7 12 4z"/><path d="M12 14.5c2.8-2.4 5.8-3 8-2-1 3.6-3.8 5.5-8 5.5s-7-1.9-8-5.5c2.2-1 5.2-.4 8 2z"/><path d="M7 19.5h10"/></svg>`
+  // ==================== TAB 2: 发现 · 小红书式双列瀑布流 ====================
+  function buildMasonryList() {
+    const query = ($("#discoverSearch").value || "").trim().toLowerCase();
+    const customVerses = getCustomVerses();
+    const all = getAllVerses();
+
+    // 当“全部”且无搜索词时，跨经交错排列（若有自建经文置前展示），让瀑布流一眼多样
+    let pool;
+    if (state.discoverFilter === "all" && !query) {
+      const order = ["xinjing", "jingang", "dizang", "yaoshi"];
+      const buckets = order.map((s) => DATA.VERSES.filter((v) => v.sutra === s));
+      const maxLen = Math.max(...buckets.map((b) => b.length));
+      const interleaved = [];
+      for (let i = 0; i < maxLen; i++) {
+        buckets.forEach((b) => {
+          if (b[i]) interleaved.push(b[i]);
+        });
+      }
+      pool = [...customVerses, ...interleaved];
+    } else {
+      pool = [...customVerses, ...DATA.VERSES];
+    }
+
+    return pool.filter((v) => {
+      if (state.discoverFilter === "custom" && !v.isCustom) return false;
+      if (state.discoverFilter !== "all" && state.discoverFilter !== "custom") {
+        if (!v.moodTags.includes(state.discoverFilter)) return false;
+      }
+      if (query) {
+        const hay = `${v.sutraName} ${v.chapter} ${v.cardTitle || ""} ${v.text} ${v.plain.literal} ${v.plain.takeaway} ${v.moodTags.join(" ")} ${v.didYouKnow}`.toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
+      return true;
+    });
+  }
+
+  function buildXhsCardHtml(v, idx, listIds) {
+    const isLiked = state.likedIds.includes(v.id);
+    const likeCount = formatCount(v.likes + (isLiked ? 1 : 0));
+    const headline = v.cardTitle || v.plain.takeaway;
+    const skins = ["paper", "sage", "bronze", "cinnabar"];
+    const skin = skins[idx % skins.length];
+    const dot = sutraDotColor(v.sutra);
+
+    // 4 种错落卡片原型循环：金句封面 / 典故公案 / 一语点破 / 梵文词源
+    const archetypeOrder = v.isCustom
+      ? ["quote", "insight"]
+      : ["quote", "story", "insight", "sanskrit"];
+    const type = archetypeOrder[idx % archetypeOrder.length];
+
+    let topHtml = "";
+    let bodyTitle = headline;
+    let estHeight = 190;
+
+    if (type === "quote") {
+      topHtml = `
+        <div class="xhs-cover skin-${skin}">
+          <div class="xhs-cover-quote">${v.text}</div>
+          <svg class="xhs-wm" width="64" height="64" viewBox="0 0 100 100" fill="none">
+            <path d="M74 26C62 14 40 13 26 26C12 39 12 62 25 75C38 88 61 88 75 74C86 63 87 43 77 32" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      `;
+      estHeight = 205 + Math.min(40, v.text.length * 0.6);
+    } else if (type === "story") {
+      topHtml = `
+        <div class="xhs-story-top">
+          <span class="xhs-tag-pill">典故</span>
+          <h3 class="xhs-story-title">${headline}</h3>
+          <p class="xhs-story-excerpt">${v.didYouKnow}</p>
+        </div>
+      `;
+      bodyTitle = "";
+      estHeight = 195;
+    } else if (type === "insight") {
+      topHtml = `
+        <div class="xhs-insight-top">
+          <p class="xhs-insight-lead">${v.plain.takeaway}</p>
+          <p class="xhs-insight-sub">“${v.text}”</p>
+        </div>
+      `;
+      bodyTitle = "";
+      estHeight = 155;
+    } else {
+      topHtml = `
+        <div class="xhs-sanskrit-band">
+          <div class="xhs-skt-term">${v.sanskrit.term}</div>
+          <div class="xhs-skt-roman">${v.sanskrit.roman}</div>
+        </div>
+      `;
+      estHeight = 180;
+    }
+
+    const heartIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="${isLiked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+
+    return {
+      estHeight,
+      html: `
+        <article class="xhs-card" data-xhs-idx="${idx}" data-xhs-id="${v.id}">
+          ${topHtml}
+          <div class="xhs-body">
+            ${bodyTitle ? `<h3 class="xhs-title">${bodyTitle}</h3>` : ""}
+            <div class="xhs-foot">
+              <span class="xhs-sutra-badge"><span class="sutra-dot" style="background:${dot};"></span>${v.sutraName}</span>
+              <button class="xhs-like-btn ${isLiked ? "liked" : ""}" data-xhs-like="${v.id}" type="button" aria-label="珍藏">${heartIcon}<span>${likeCount}</span></button>
+            </div>
+          </div>
+        </article>
+      `
     };
-    return svgs[type] || svgs.knot;
   }
 
   function renderDiscover() {
-    $("#moodRail").innerHTML = DATA.MOOD_TOPICS.map(
-      (m) => `
-      <button class="mood-card" data-mood-id="${m.id}" type="button">
-        <div>
-          <strong>${m.title}</strong>
-          <span>${m.subtitle}</span>
-        </div>
-        <div class="mood-icon">${getMoodIconSvg(m.icon, m.color)}</div>
-      </button>
-    `
-    ).join("");
-
-    $("#storyRail").innerHTML = DATA.DISCOVER_STORIES.map(
-      (s) => `
-      <button class="story-card" data-story-verse="${s.verseId}" type="button">
-        <span class="story-tag">${s.tag}</span>
-        <strong>${s.title}</strong>
-        <p>${s.snippet}</p>
-      </button>
-    `
-    ).join("");
-
-    $$("[data-mood-id]").forEach((card) => {
-      card.addEventListener("click", () => {
-        const mood = DATA.MOOD_TOPICS.find((m) => m.id === card.dataset.moodId);
-        if (mood) openDiscoverCards(mood.verseIds, 0);
-      });
-    });
-
-    $$("[data-story-verse]").forEach((card) => {
-      card.addEventListener("click", () => {
-        const allStoryIds = DATA.DISCOVER_STORIES.map((s) => s.verseId);
-        const startIdx = Math.max(0, allStoryIds.indexOf(card.dataset.storyVerse));
-        openDiscoverCards(allStoryIds, startIdx);
-      });
-    });
-  }
-
-  function handleDiscoverSearch(query) {
-    const q = query.trim().toLowerCase();
-    const clearBtn = $("#searchClear");
-    const resWrap = $("#searchResultsWrap");
-    const defBody = $("#discoverDefaultBody");
-
-    clearBtn.classList.toggle("hidden", !q);
-    if (!q) {
-      resWrap.classList.add("hidden");
-      defBody.classList.remove("hidden");
-      return;
+    const filters = [
+      { id: "all", label: "全部" },
+      { id: "焦虑内耗", label: "焦虑内耗" },
+      { id: "执念难放", label: "执念难放" },
+      { id: "身心安康", label: "身心安康" },
+      { id: "失眠静心", label: "失眠静心" },
+      { id: "人际无常", label: "人际无常" }
+    ];
+    if ((state.customSutras || []).length > 0) {
+      filters.push({ id: "custom", label: "自建" });
+    } else if (state.discoverFilter === "custom") {
+      state.discoverFilter = "all";
     }
 
-    defBody.classList.add("hidden");
-    resWrap.classList.remove("hidden");
-
-    const matches = DATA.VERSES.filter((v) => {
-      const hay = `${v.sutraName} ${v.chapter} ${v.text} ${v.plain.literal} ${v.plain.takeaway} ${v.moodTags.join(" ")} ${v.didYouKnow}`.toLowerCase();
-      return hay.includes(q);
-    });
-
-    $("#searchResultCount").textContent = `${matches.length} 条`;
-    const listEl = $("#searchResultsList");
-    if (matches.length === 0) {
-      listEl.innerHTML = `<div class="mine-empty">未见匹配经句</div>`;
-      return;
-    }
-
-    listEl.innerHTML = matches
+    const bar = $("#discoverFilterBar");
+    bar.innerHTML = filters
       .map(
-        (v) => `
-      <button class="search-result-card" data-search-vid="${v.id}" type="button">
-        <div class="meta">${v.sutraName} · ${shortChapter(v)}</div>
-        <div class="quote">${v.text}</div>
-      </button>
-    `
+        (f) => `<button class="filter-pill ${state.discoverFilter === f.id ? "active" : ""}" data-filter-id="${f.id}" type="button">${f.label}</button>`
       )
       .join("");
 
-    listEl.querySelectorAll("[data-search-vid]").forEach((btn) => {
+    bar.querySelectorAll("[data-filter-id]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        openDiscoverCards([btn.dataset.searchVid], 0);
+        state.discoverFilter = btn.dataset.filterId;
+        saveState();
+        renderDiscover();
+      });
+    });
+
+    const filtered = buildMasonryList();
+    const filteredIds = filtered.map((v) => v.id);
+    const masonryEl = $("#discoverMasonry");
+    const emptyEl = $("#discoverEmpty");
+
+    if (filtered.length === 0) {
+      masonryEl.innerHTML = "";
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+    emptyEl.classList.add("hidden");
+
+    const cols = ["", ""];
+    const heights = [0, 0];
+    filtered.forEach((v, idx) => {
+      const built = buildXhsCardHtml(v, idx, filteredIds);
+      const targetCol = heights[0] <= heights[1] ? 0 : 1;
+      cols[targetCol] += built.html;
+      heights[targetCol] += built.estHeight;
+    });
+
+    masonryEl.innerHTML = `
+      <div class="masonry-col">${cols[0]}</div>
+      <div class="masonry-col">${cols[1]}</div>
+    `;
+
+    masonryEl.querySelectorAll("[data-xhs-like]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleLike(btn.dataset.xhsLike);
+      });
+    });
+
+    masonryEl.querySelectorAll("[data-xhs-idx]").forEach((card) => {
+      card.addEventListener("click", () => {
+        openDiscoverCards(filteredIds, Number(card.dataset.xhsIdx));
       });
     });
   }
@@ -1134,22 +1555,26 @@
       <div class="dd-sub">${shortChapter(v)}</div>
       <p class="dd-quote">“${v.text}”</p>
 
-      <div class="dd-section-label">本义</div>
+      <div class="dd-section-label">${v.isCustom ? "简介" : "本义"}</div>
       <p class="dd-meaning">${v.deepStudy.meaning}</p>
 
       <div class="did-you-know-box">
-        <div class="dyk-title">典故</div>
+        <div class="dyk-title">${v.isCustom ? "出处" : "典故"}</div>
         <p>${v.didYouKnow}</p>
       </div>
 
-      <div class="dd-related-row">
-        ${v.relatedIds
-          .map((rid) => {
-            const rv = getVerseById(rid);
-            return `<button class="related-pill" data-dd-rel="${rv.id}" type="button">${rv.sutraName} · ${shortChapter(rv)}</button>`;
-          })
-          .join("")}
-      </div>
+      ${
+        v.relatedIds.length > 0
+          ? `<div class="dd-related-row">
+              ${v.relatedIds
+                .map((rid) => {
+                  const rv = getVerseById(rid);
+                  return `<button class="related-pill" data-dd-rel="${rv.id}" type="button">${rv.sutraName} · ${shortChapter(rv)}</button>`;
+                })
+                .join("")}
+            </div>`
+          : ""
+      }
 
       <button class="dd-deep-link" id="btnDdDeepStudy" type="button">
         <span>解经</span>
@@ -1198,7 +1623,7 @@
 
   // ==================== TAB 3: 修行 Plans ====================
   function renderPlans() {
-    $("#todayReadCount").textContent = String(Math.min(state.readIds.length, DATA.VERSES.length));
+    $("#todayReadCount").textContent = String(Math.min(state.readIds.length, getAllVerses().length));
     $("#totalReadCount").textContent = String(state.readIds.length);
     $("#savedSummaryCount").textContent = String(state.likedIds.length);
 
@@ -1268,6 +1693,54 @@
       $("#mineProBadge").textContent = "一念 PRO · 已开启";
       $("#mineProTitle").textContent = "梵文词源与异译对照";
       $("#btnOpenPaywallFromMine").textContent = "详情";
+    }
+
+    // 渲染自建经卷列表
+    const customWrap = $("#mineCustomList");
+    const customs = state.customSutras || [];
+    if (customs.length === 0) {
+      customWrap.innerHTML = `<div class="mine-empty" style="padding:18px 14px;">尚未上传自建经文</div>`;
+    } else {
+      customWrap.innerHTML = customs
+        .map(
+          (cs) => `
+          <div class="mine-custom-row">
+            <button class="mine-custom-info" data-open-custom="${cs.id}" type="button">
+              <strong>${cs.title}</strong>
+              <span>${cs.author ? cs.author + " · " : ""}${cs.segments.length} 屏</span>
+            </button>
+            <button class="mine-del-btn" data-del-custom="${cs.id}" type="button">删除</button>
+          </div>
+        `
+        )
+        .join("");
+
+      customWrap.querySelectorAll("[data-open-custom]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const cid = btn.dataset.openCustom;
+          state.sutraMode = cid;
+          state.filterLikedOnly = false;
+          state.currentVerseId = `${cid}-1`;
+          saveState();
+          switchTab("feed");
+          renderFeed();
+        });
+      });
+
+      customWrap.querySelectorAll("[data-del-custom]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const cid = btn.dataset.delCustom;
+          state.customSutras = state.customSutras.filter((c) => c.id !== cid);
+          if (state.sutraMode === cid) {
+            state.sutraMode = "xinjing";
+            state.currentVerseId = "xj-1";
+          }
+          saveState();
+          renderMine();
+          renderFeed();
+          showToast("已删除");
+        });
+      });
     }
 
     $$("[data-mine-tab]").forEach((b) => {
@@ -1355,7 +1828,8 @@
     });
 
     $("#btnRandomVerse").addEventListener("click", () => {
-      const candidates = DATA.VERSES.filter((v) => v.id !== state.currentVerseId);
+      const all = getAllVerses();
+      const candidates = all.filter((v) => v.id !== state.currentVerseId);
       const picked = candidates[Math.floor(Math.random() * candidates.length)];
       scrollToVerseId(picked.id, true);
       showToast(picked.sutraName);
@@ -1381,20 +1855,18 @@
     $("#actComment").addEventListener("click", () => openCommentSheet(state.currentVerseId));
     $("#actShare").addEventListener("click", () => openSnapshotModal(state.currentVerseId));
 
+    // Discover 搜索、全经弹窗与瀑布流联动
     const searchInput = $("#discoverSearch");
-    searchInput.addEventListener("input", (e) => handleDiscoverSearch(e.target.value));
+    searchInput.addEventListener("input", () => {
+      $("#searchClear").classList.toggle("hidden", !searchInput.value.trim());
+      renderDiscover();
+    });
     $("#searchClear").addEventListener("click", () => {
       searchInput.value = "";
-      handleDiscoverSearch("");
+      $("#searchClear").classList.add("hidden");
+      renderDiscover();
     });
-
-    $("#btnStartDiscoverCards").addEventListener("click", () => {
-      openDiscoverCards(["xj-1", "jg-2", "dz-1", "ys-2", "dz-5", "ys-7"], 0);
-    });
-    $("#btnOpenContextXinjing").addEventListener("click", () => openContextModal("xinjing", state.currentVerseId));
-    $("#btnOpenContextJingang").addEventListener("click", () => openContextModal("jingang", state.currentVerseId));
-    $("#btnOpenContextDizang").addEventListener("click", () => openContextModal("dizang", state.currentVerseId));
-    $("#btnOpenContextYaoshi").addEventListener("click", () => openContextModal("yaoshi", state.currentVerseId));
+    $("#btnOpenFullSutraPicker").addEventListener("click", openFullSutraSheet);
 
     $("#btnCloseDiscoverCard").addEventListener("click", closeDiscoverCard);
     $("#btnPrevDiscoverCard").addEventListener("click", () => {
@@ -1410,6 +1882,45 @@
       }
     });
 
+    // 上传经文 Modal
+    $("#btnOpenUploadFromMine").addEventListener("click", openUploadModal);
+    $("#btnCloseUploadModal").addEventListener("click", closeUploadModal);
+    $("#btnSaveUpload").addEventListener("click", saveUploadedSutra);
+    $("#uploadTextArea").addEventListener("input", updateUploadPreview);
+
+    $("#btnFillSampleUpload").addEventListener("click", () => {
+      const sample = DATA.SAMPLE_UPLOAD_TEXT;
+      $("#uploadTitleInput").value = sample.title;
+      $("#uploadAuthorInput").value = sample.author;
+      $("#uploadTextArea").value = sample.text;
+      updateUploadPreview();
+    });
+
+    $("#uploadFileInput").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const baseName = file.name.replace(/\.(txt|md|text)$/i, "");
+      if (!$("#uploadTitleInput").value.trim()) {
+        $("#uploadTitleInput").value = baseName;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        $("#uploadTextArea").value = String(reader.result || "");
+        updateUploadPreview();
+      };
+      reader.readAsText(file, "utf-8");
+      e.target.value = "";
+    });
+
+    $$("[data-split-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        uploadSplitMode = btn.dataset.splitMode;
+        $$("[data-split-mode]").forEach((b) => b.classList.toggle("active", b === btn));
+        updateUploadPreview();
+      });
+    });
+
+    // Mine 选项卡 & 操作
     $$("[data-mine-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         state.mineSubTab = btn.dataset.mineTab;
@@ -1425,11 +1936,15 @@
     });
     $("#btnMineToggleTheme").addEventListener("click", toggleTheme);
 
+    // Sheets / Modals 背景遮罩关闭
     $("#studySheetBackdrop").addEventListener("click", (e) => {
       if (e.target === $("#studySheetBackdrop")) closeStudySheet();
     });
     $("#sutraSheetBackdrop").addEventListener("click", (e) => {
       if (e.target === $("#sutraSheetBackdrop")) closeSutraSheet();
+    });
+    $("#fullSutraSheetBackdrop").addEventListener("click", (e) => {
+      if (e.target === $("#fullSutraSheetBackdrop")) $("#fullSutraSheetBackdrop").classList.add("hidden");
     });
     $("#commentSheetBackdrop").addEventListener("click", (e) => {
       if (e.target === $("#commentSheetBackdrop")) closeCommentSheet();
@@ -1445,7 +1960,8 @@
         !$("#onboardingOverlay").classList.contains("hidden") ||
         !$("#studySheetBackdrop").classList.contains("hidden") ||
         !$("#commentSheetBackdrop").classList.contains("hidden") ||
-        !$("#sutraSheetBackdrop").classList.contains("hidden")
+        !$("#sutraSheetBackdrop").classList.contains("hidden") ||
+        !$("#uploadModalBackdrop").classList.contains("hidden")
       ) {
         return;
       }
@@ -1465,18 +1981,19 @@
     });
     $("#deskToggleTheme").addEventListener("click", toggleTheme);
     $("#deskSwitchSutra").addEventListener("click", () => {
-      const order = ["xinjing", "jingang", "dizang", "yaoshi"];
-      const labels = { xinjing: "心经", jingang: "金刚经", dizang: "地藏经", yaoshi: "药师经" };
-      const idx = order.indexOf(state.sutraMode);
-      state.sutraMode = order[(idx + 1) % order.length];
+      const metas = getAllSutrasMeta();
+      const idx = metas.findIndex((m) => m.id === state.sutraMode);
+      const next = metas[(idx + 1) % metas.length];
+      state.sutraMode = next.id;
       state.filterLikedOnly = false;
       const list = getFeedList();
       state.currentVerseId = list[0].id;
       saveState();
       switchTab("feed");
       renderFeed();
-      showToast(labels[state.sutraMode]);
+      showToast(next.label);
     });
+    $("#deskOpenUpload").addEventListener("click", openUploadModal);
     $("#deskOpenPaywall").addEventListener("click", () => openPaywallModal());
   }
 
